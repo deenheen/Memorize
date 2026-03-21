@@ -27,7 +27,7 @@
             min-height: 100vh;
         }
 
-        /* 검색 영역 (초기 화면 중앙) */
+        /* 검색 영역 */
         #search-container {
             display: flex;
             flex-direction: column;
@@ -99,7 +99,7 @@
             background-color: #357ABD;
         }
 
-        /* 결과 영역 (세로 배열 리스트) */
+        /* 결과 영역 */
         #results-container {
             display: none;
             flex-direction: column;
@@ -139,23 +139,55 @@
             color: var(--text-sub);
         }
 
-        .refresh-btn {
-            background: none;
-            border: none;
-            font-size: 1.2rem;
-            cursor: pointer;
-            color: var(--text-sub);
-            padding: 0.5rem;
-            border-radius: 50%;
-            transition: background-color 0.2s, color 0.2s;
+        /* 피드백 버튼 (Thumbs Up/Down) */
+        .feedback-btns {
             display: flex;
-            align-items: center;
-            gap: 5px;
+            gap: 0.5rem;
         }
 
-        .refresh-btn:hover {
+        .thumb-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: transform 0.2s, background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 45px;
+            height: 45px;
+        }
+
+        .thumb-btn:hover {
             background-color: #F3F4F6;
-            color: var(--primary-color);
+            transform: scale(1.1);
+        }
+
+        /* Toast 알림 메시지 스타일 */
+        #toast {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(31, 41, 55, 0.9);
+            color: white;
+            padding: 14px 28px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 500;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease, bottom 0.3s ease;
+            z-index: 1000;
+        }
+
+        #toast.show {
+            opacity: 1;
+            visibility: visible;
+            bottom: 50px;
         }
 
         .mnemonic-content {
@@ -182,6 +214,11 @@
         .mnemonic-text strong {
             color: #111827;
         }
+        
+        .mnemonic-text span.highlight {
+            color: #E11D48;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -192,100 +229,80 @@
             <div class="icons" title="파일/이미지 첨부">
                 📎 📷
             </div>
-            <input type="text" id="word-input" placeholder="단어, 파일, 혹은 이미지를 입력하세요" onkeypress="handleEnter(event)">
+            <input type="text" id="word-input" placeholder="단어, 파일, 혹은 이미지를 입력하세요 (엔터 또는 버튼 클릭)" onkeypress="handleEnter(event)">
             <button onclick="generateMnemonics()">암기법 변환</button>
         </div>
     </div>
 
-    <div id="results-container">
-        </div>
+    <div id="results-container"></div>
+
+    <div id="toast">확인했습니다. 앞으로 유사한 암기법이 자주 사용됩니다.</div>
 
     <script>
-        // 예시 데이터베이스 (각 단어당 여러 개의 암기법을 배열로 저장)
+        // 경선식 스타일 + 유저 피드백이 듬뿍 담긴 데이터베이스
         const mnemonicDB = [
             {
                 word: "Radius / Ulnar",
                 meaning: "요골(노뼈) / 척골(자뼈)",
                 mnemonics: [
-                    {
-                        type: "연상법 / 비유",
-                        text: "<strong>얼라(Ulnar)</strong>는 안에서 키우고 <strong>라디오(Radius)</strong>는 밖에서 들어라! (해부학적 자세 기준 새끼손가락 쪽이 Ulnar, 엄지손가락 쪽이 Radius)"
-                    },
-                    {
-                        type: "형태 변환",
-                        text: "Ulnar의 'U'는 움푹 들어간 안쪽을, Radius의 'R'은 바깥으로 뻗은 라운드(Round) 형태를 연상하세요."
-                    }
+                    { type: "상황 연상법", text: "<strong><span class='highlight'>얼라(Ulnar)</span></strong>는 안에서 키우고 <strong><span class='highlight'>라디오(Radius)</span></strong>는 밖에서 들어라! (해부학적 자세 기준 새끼손가락 쪽 안쪽 뼈가 Ulnar, 엄지손가락 쪽 바깥쪽 뼈가 Radius)" },
+                    { type: "형태 변환", text: "Ulnar의 'U'는 움푹 들어간 안쪽 뼈, Radius의 'R'은 바깥으로 둥글게(Round) 뻗은 뼈를 연상하세요." }
                 ]
             },
             {
-                word: "Erythrocyte",
-                meaning: "적혈구",
+                word: "Leiomyoma",
+                meaning: "평활근종 (매끈한 근육에 생기는 양성 종양)",
                 mnemonics: [
-                    {
-                        type: "어원 조합 / 발음 변환",
-                        text: "<strong>Erythro(에리쓰로)</strong>: 레드 와인을 마시고 얼굴이 빨개진 상태 연상 (빨강) + <strong>Cyto</strong>: 세포 = <strong>빨간 세포</strong>"
-                    },
-                    {
-                        type: "이미지 연상",
-                        text: "에리(Ery)가 스로(thro) 던진 붉은색 혈액 공(세포)을 떠올려보세요."
-                    }
+                    { type: "발음 변환 종합세트", text: "<strong><span class='highlight'>레이(Lei)</span></strong>저 쫙~ 쏴서 제모했더니 피부가 <strong>매끈한!</strong><br><strong><span class='highlight'>마이 옷(Myo)</span></strong>! 내 옷이 빵빵한 <strong>근육</strong> 때문에 터질 것 같아!<br><strong><span class='highlight'>오마(Oma)</span></strong>이갓! 내 몸에 <strong>종양</strong>이 생기다니!<br><br>👉 <strong>합체:</strong> 매끈하게(Lei) 레이저 제모한 마이 옷(Myo) 터질듯한 근육맨이 '오마(Oma)이갓! 종양이라니!' 하고 절망하는 모습." },
+                    { type: "어원 조합", text: "Lei(매끈한) + myo(근육) + oma(종양) = 매끈한 근육에 생긴 종양." }
                 ]
             },
             {
-                word: "Myoma",
-                meaning: "근종",
+                word: "Cyanosis",
+                meaning: "청색증 (피부와 점막이 푸르게 변하는 증상)",
                 mnemonics: [
-                    {
-                        type: "발음 변환 / 조합",
-                        text: "<strong>Myo(마이오)</strong>: 자아도취된 근육맨 연상 + <strong>Oma(엄마)</strong>: '엄마가 걱정하는 종양' = <strong>근육에 생긴 종양</strong>"
-                    },
-                    {
-                        type: "스토리텔링",
-                        text: "'마이(My) 오마(Oma) 갓! 내 근육에 종양이 생기다니!' 하고 깜짝 놀라는 상황을 상상해 보세요."
-                    }
+                    { type: "이미지 연상", text: "<strong><span class='highlight'>Cyano(싸이언)</span></strong> 👉 기를 너무 많이 모아서 노랗다 못해 <strong>파란색</strong>으로 변해버린 <strong>초사이언</strong> 블루! (파란색)" },
+                    { type: "상황 연상", text: "<strong><span class='highlight'>싸늘(Cyan)</span></strong> 👉 추운 겨울 밖에서 벌벌 떨었더니 얼굴이 <strong>싸늘(Cyan)</strong>하게 식어서 <strong>파랗게</strong> 질린 모습. (-osis는 질환을 뜻하므로 파랗게 질린 병)" }
+                ]
+            },
+            {
+                word: "Etiology",
+                meaning: "병인학 (질병의 원인을 연구하는 학문)",
+                mnemonics: [
+                    { type: "상황 연상", text: "<strong><span class='highlight'>에티(Eti)</span></strong> 👉 맨체스터 시티 리그 우승의 가장 큰 <strong>원인</strong>은 <strong>에티</strong>하드(Etihad) 항공사의 빵빵한 스폰서십 때문이지!" },
+                    { type: "발음 변환", text: "<strong><span class='highlight'>에취(Eti)</span></strong> 👉 <strong>에취!</strong> 하고 재채기를 계속하는 <strong>원인</strong>이 대체 뭐야? 감기야 비염이야? (에취(Eti)하는 원인을 찾는 학문(-ology))" }
                 ]
             }
         ];
 
-        // 현재 각 단어 카드가 어떤 암기법 인덱스를 보여주고 있는지 추적하는 객체
         const currentMnemonicIndex = {};
+        let toastTimeout;
 
-        // 엔터키 입력 처리
         function handleEnter(event) {
             if (event.key === 'Enter') {
                 generateMnemonics();
             }
         }
 
-        // 암기법 생성 시작 함수
         function generateMnemonics() {
             const searchContainer = document.getElementById('search-container');
             const resultsContainer = document.getElementById('results-container');
-            const inputVal = document.getElementById('word-input').value;
 
-            // 검색창을 위로 올리고 결과를 보여주는 UI 전환
             searchContainer.classList.add('active');
             document.querySelector('h1').style.fontSize = '1.5rem';
             resultsContainer.style.display = 'flex';
-
-            // 결과 컨테이너 초기화
             resultsContainer.innerHTML = '';
 
-            // DB에 있는 예시 데이터를 순회하며 카드 렌더링
             mnemonicDB.forEach((item, index) => {
-                // 초기 인덱스는 0으로 설정
                 currentMnemonicIndex[index] = 0;
-                
                 const card = document.createElement('div');
                 card.className = 'word-card';
                 card.id = `card-${index}`;
-                
                 renderCardContent(card, index, item);
                 resultsContainer.appendChild(card);
             });
         }
 
-        // 카드 내부 HTML을 렌더링하는 함수
         function renderCardContent(cardElement, index, item) {
             const mnemonic = item.mnemonics[currentMnemonicIndex[index]];
             
@@ -295,9 +312,10 @@
                         <h2>${item.word}</h2>
                         <p>${item.meaning}</p>
                     </div>
-                    <button class="refresh-btn" onclick="refreshMnemonic(${index})" title="다른 암기법 보기">
-                        🔄 <span>새로고침</span>
-                    </button>
+                    <div class="feedback-btns">
+                        <button class="thumb-btn up" onclick="handleThumbsUp()" title="이 암기법이 좋아요">👍</button>
+                        <button class="thumb-btn down" onclick="handleThumbsDown(${index})" title="다른 암기법 보기">👎</button>
+                    </div>
                 </div>
                 <div class="mnemonic-content">
                     <span class="mnemonic-tag">${mnemonic.type}</span>
@@ -306,23 +324,34 @@
             `;
         }
 
-        // 개별 카드 새로고침(다른 암기법으로 전환) 함수
-        function refreshMnemonic(index) {
+        // Thumbs Down: 다른 암기법으로 교체
+        function handleThumbsDown(index) {
             const item = mnemonicDB[index];
             const maxIndex = item.mnemonics.length;
-            
-            // 다음 인덱스로 이동 (마지막이면 다시 처음으로)
             currentMnemonicIndex[index] = (currentMnemonicIndex[index] + 1) % maxIndex;
             
             const cardElement = document.getElementById(`card-${index}`);
-            
-            // 시각적 효과를 위해 투명도 조절
             cardElement.style.opacity = '0.5';
             setTimeout(() => {
                 renderCardContent(cardElement, index, item);
                 cardElement.style.opacity = '1';
                 cardElement.style.transition = 'opacity 0.3s ease';
             }, 150);
+        }
+
+        // Thumbs Up: Toast 메시지 띄우기
+        function handleThumbsUp() {
+            const toast = document.getElementById('toast');
+            
+            if (toastTimeout) {
+                clearTimeout(toastTimeout);
+            }
+            
+            toast.classList.add('show');
+            
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2500);
         }
     </script>
 </body>
