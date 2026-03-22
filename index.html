@@ -13,6 +13,7 @@
             --text-sub: #6B7280;
             --card-bg: #FFFFFF;
             --border-color: #E5E7EB;
+            --star-color: #F59E0B;
         }
 
         body {
@@ -27,13 +28,73 @@
             min-height: 100vh;
         }
 
+        /* 상단 네비게이션 탭 */
+        .top-nav {
+            width: 100%;
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-inner {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 1rem;
+        }
+
+        .logo {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            cursor: pointer;
+        }
+
+        .tab-menu {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-sub);
+            cursor: pointer;
+            padding: 1rem 0.5rem;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+        }
+
+        .bookmark-count-badge {
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 0.75rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 20px;
+            margin-left: 4px;
+        }
+
         /* 검색 영역 */
         #search-container {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            height: calc(100vh - 60px);
             width: 100%;
             transition: all 0.5s ease-in-out;
         }
@@ -99,14 +160,22 @@
             background-color: #357ABD;
         }
 
-        /* 결과 영역 */
-        #results-container {
+        /* 결과 영역 (검색 결과 & 나만의 단어장 공통) */
+        .content-container {
             display: none;
             flex-direction: column;
             width: 100%;
             max-width: 800px;
             gap: 1.5rem;
             padding: 0 1rem 3rem 1rem;
+        }
+
+        /* 단어장 탭 전용 빈 상태 메시지 */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 1rem;
+            color: var(--text-sub);
+            font-size: 1.1rem;
         }
 
         .word-card {
@@ -127,10 +196,42 @@
             padding-bottom: 1rem;
         }
 
+        .word-title-area {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .word-title-top {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
         .word-title h2 {
             margin: 0;
             font-size: 1.8rem;
             color: var(--primary-color);
+        }
+
+        /* 북마크 버튼 */
+        .bookmark-btn {
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            color: var(--text-sub);
+            cursor: pointer;
+            padding: 0;
+            transition: transform 0.2s;
+            display: flex;
+            align-items: center;
+        }
+
+        .bookmark-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .bookmark-btn.active {
+            color: var(--star-color);
         }
 
         .word-title p {
@@ -289,23 +390,37 @@
 </head>
 <body>
 
+    <nav class="top-nav">
+        <div class="nav-inner">
+            <div class="logo" onclick="switchTab('home')">Medi-Mnemonic</div>
+            <div class="tab-menu">
+                <button class="tab-btn active" id="tab-home" onclick="switchTab('home')">단어 검색</button>
+                <button class="tab-btn" id="tab-wordbook" onclick="switchTab('wordbook')">나만의 단어장 <span class="bookmark-count-badge" id="bookmark-count">0</span></button>
+            </div>
+        </div>
+    </nav>
+
     <div id="search-container">
         <h1>의학용어 암기 마스터</h1>
         <div class="search-bar">
-            <div class="icons" title="파일/이미지 첨부">
-                📎 📷
-            </div>
-            <input type="text" id="word-input" placeholder="단어, 파일, 혹은 이미지를 입력하세요 (엔터 또는 버튼 클릭)" onkeypress="handleEnter(event)">
+            <div class="icons" title="파일/이미지 첨부">📎 📷</div>
+            <input type="text" id="word-input" placeholder="단어, 파일, 혹은 이미지를 입력하세요 (엔터 또는 클릭)" onkeypress="handleEnter(event)">
             <button onclick="generateMnemonics()">암기법 변환</button>
         </div>
     </div>
 
-    <div id="results-container"></div>
+    <div id="results-container" class="content-container"></div>
+
+    <div id="wordbook-container" class="content-container">
+        <div class="empty-state">
+            아직 단어장에 추가된 단어가 없습니다.<br>
+            검색 결과에서 ⭐ 버튼을 눌러 단어를 추가해 보세요!
+        </div>
+    </div>
 
     <div id="toast"></div>
 
     <script>
-        // AI 생성 암기법 + 유저 제출 암기법 데이터베이스
         const mnemonicDB = [
             {
                 word: "Radius / Ulnar",
@@ -355,10 +470,73 @@
             }
         ];
 
-        // AI 암기법 및 유저 암기법의 현재 인덱스 저장
+        // 상태 관리
         const currentMnemonicIndex = {};
         const currentUserMnemonicIndex = {};
+        const bookmarkedIndices = new Set(); // 북마크된 단어의 index 저장
         let toastTimeout;
+        let activeTab = 'home'; // 'home' 또는 'wordbook'
+
+        // 탭 전환 로직
+        function switchTab(tabName) {
+            activeTab = tabName;
+            const searchContainer = document.getElementById('search-container');
+            const resultsContainer = document.getElementById('results-container');
+            const wordbookContainer = document.getElementById('wordbook-container');
+            
+            document.getElementById('tab-home').classList.toggle('active', tabName === 'home');
+            document.getElementById('tab-wordbook').classList.toggle('active', tabName === 'wordbook');
+
+            if (tabName === 'home') {
+                wordbookContainer.style.display = 'none';
+                searchContainer.style.display = 'flex';
+                // 검색된 적이 있으면(active 클래스) 결과도 보여줌
+                if (searchContainer.classList.contains('active')) {
+                    resultsContainer.style.display = 'flex';
+                }
+            } else if (tabName === 'wordbook') {
+                searchContainer.style.display = 'none';
+                resultsContainer.style.display = 'none';
+                wordbookContainer.style.display = 'flex';
+                renderWordbook();
+            }
+        }
+
+        // 북마크 토글 로직
+        function toggleBookmark(index) {
+            if (bookmarkedIndices.has(index)) {
+                bookmarkedIndices.delete(index);
+                showToast('단어장에서 삭제되었습니다. 🗑️');
+            } else {
+                bookmarkedIndices.add(index);
+                showToast('나만의 단어장에 추가되었습니다! ⭐');
+            }
+            
+            // 배지 숫자 업데이트
+            document.getElementById('bookmark-count').innerText = bookmarkedIndices.size;
+            
+            // 모든 렌더링된 카드(결과창, 단어장 둘 다)의 별 모양 즉시 동기화
+            updateBookmarkIcons(index);
+
+            // 단어장 탭에 있을 때 삭제를 누르면 바로 리스트에서 사라지게 함
+            if (activeTab === 'wordbook') {
+                renderWordbook();
+            }
+        }
+
+        // DOM 상의 북마크 아이콘 업데이트 (결과 컨테이너, 단어장 컨테이너 동시 동기화)
+        function updateBookmarkIcons(index) {
+            const btns = document.querySelectorAll(`.bookmark-btn-${index}`);
+            const isBookmarked = bookmarkedIndices.has(index);
+            btns.forEach(btn => {
+                btn.innerHTML = isBookmarked ? '★' : '☆';
+                if(isBookmarked) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
 
         function handleEnter(event) {
             if (event.key === 'Enter') {
@@ -367,6 +545,9 @@
         }
 
         function generateMnemonics() {
+            // 다른 탭에 있다가 엔터를 쳤을 경우를 대비해 home 탭으로 전환
+            if(activeTab !== 'home') switchTab('home');
+
             const searchContainer = document.getElementById('search-container');
             const resultsContainer = document.getElementById('results-container');
 
@@ -376,31 +557,64 @@
             resultsContainer.innerHTML = '';
 
             mnemonicDB.forEach((item, index) => {
-                currentMnemonicIndex[index] = 0;
-                currentUserMnemonicIndex[index] = 0; // 유저 암기법 인덱스 초기화
+                if(currentMnemonicIndex[index] === undefined) {
+                    currentMnemonicIndex[index] = 0;
+                    currentUserMnemonicIndex[index] = 0;
+                }
                 
                 const card = document.createElement('div');
                 card.className = 'word-card';
-                card.id = `card-${index}`;
-                renderCardContent(card, index, item);
+                card.id = `card-home-${index}`; // 홈 탭 고유 ID
+                renderCardHTML(card, index, item, 'home');
                 resultsContainer.appendChild(card);
             });
         }
 
-        // 전체 카드 렌더링 (AI 영역 + 유저 영역)
-        function renderCardContent(cardElement, index, item) {
+        // 단어장 렌더링
+        function renderWordbook() {
+            const wordbookContainer = document.getElementById('wordbook-container');
+            wordbookContainer.innerHTML = '';
+
+            if (bookmarkedIndices.size === 0) {
+                wordbookContainer.innerHTML = `
+                    <div class="empty-state">
+                        아직 단어장에 추가된 단어가 없습니다.<br>
+                        검색 결과에서 ⭐ 버튼을 눌러 단어를 추가해 보세요!
+                    </div>
+                `;
+                return;
+            }
+
+            // 북마크된 인덱스들만 순회하며 카드 생성
+            bookmarkedIndices.forEach(index => {
+                const item = mnemonicDB[index];
+                const card = document.createElement('div');
+                card.className = 'word-card';
+                card.id = `card-wordbook-${index}`; // 단어장 탭 고유 ID
+                renderCardHTML(card, index, item, 'wordbook');
+                wordbookContainer.appendChild(card);
+            });
+        }
+
+        // 카드 내부 HTML 렌더링 (홈 탭, 단어장 탭 공통 로직)
+        function renderCardHTML(cardElement, index, item, viewType) {
             const mnemonic = item.mnemonics[currentMnemonicIndex[index]];
+            const isBookmarked = bookmarkedIndices.has(index);
             
-            // 1. AI 메인 영역
             let html = `
                 <div class="word-header">
-                    <div class="word-title">
-                        <h2>${item.word}</h2>
+                    <div class="word-title-area">
+                        <div class="word-title-top">
+                            <h2 class="word-title">${item.word}</h2>
+                            <button class="bookmark-btn bookmark-btn-${index} ${isBookmarked ? 'active' : ''}" onclick="toggleBookmark(${index})" title="단어장 추가/삭제">
+                                ${isBookmarked ? '★' : '☆'}
+                            </button>
+                        </div>
                         <p>${item.meaning}</p>
                     </div>
                     <div class="feedback-btns">
-                        <button class="thumb-btn up" onclick="showToast('AI 암기법을 내 단어장에 추가했습니다 👍')" title="이 암기법이 좋아요">👍</button>
-                        <button class="thumb-btn down" onclick="handleThumbsDown(${index})" title="다른 AI 암기법 보기">👎</button>
+                        <button class="thumb-btn up" onclick="showToast('이 암기법을 평가했습니다 👍')" title="이 암기법이 좋아요">👍</button>
+                        <button class="thumb-btn down" onclick="handleThumbsDown(${index}, '${viewType}')" title="다른 AI 암기법 보기">👎</button>
                     </div>
                 </div>
                 <div class="mnemonic-content">
@@ -409,17 +623,16 @@
                 </div>
             `;
 
-            // 2. 유저 제안 영역 (데이터가 있을 경우에만 렌더링)
             if (item.userMnemonics && item.userMnemonics.length > 0) {
                 const userMnemonic = item.userMnemonics[currentUserMnemonicIndex[index]];
                 html += `
                     <hr class="divider">
-                    <div class="user-mnemonic-section" id="user-section-${index}">
+                    <div class="user-mnemonic-section" id="user-section-${viewType}-${index}">
                         <div class="user-mnemonic-header">
                             <span class="user-mnemonic-title">💡 이런 암기법은 어떠신가요?</span>
                             <div class="user-feedback-btns">
                                 <button class="user-thumb-btn up" onclick="showToast('유저 암기법에 투표했습니다! 👏')" title="추천해요">👍</button>
-                                <button class="user-thumb-btn down" onclick="handleUserThumbsDown(${index})" title="다른 유저 암기법 보기">👎</button>
+                                <button class="user-thumb-btn down" onclick="handleUserThumbsDown(${index}, '${viewType}')" title="다른 유저 암기법 보기">👎</button>
                             </div>
                         </div>
                         <div class="mnemonic-text">
@@ -433,46 +646,43 @@
             cardElement.innerHTML = html;
         }
 
-        // AI 암기법 Thumbs Down: 다른 AI 암기법으로 교체
-        function handleThumbsDown(index) {
+        // AI 영역 Thumbs Down
+        function handleThumbsDown(index, viewType) {
             const item = mnemonicDB[index];
             const maxIndex = item.mnemonics.length;
             currentMnemonicIndex[index] = (currentMnemonicIndex[index] + 1) % maxIndex;
             
-            const cardElement = document.getElementById(`card-${index}`);
+            const cardElement = document.getElementById(`card-${viewType}-${index}`);
             cardElement.style.opacity = '0.5';
             setTimeout(() => {
-                renderCardContent(cardElement, index, item);
+                renderCardHTML(cardElement, index, item, viewType);
                 cardElement.style.opacity = '1';
                 cardElement.style.transition = 'opacity 0.3s ease';
             }, 150);
         }
 
-        // 유저 암기법 Thumbs Down: 다른 유저 암기법으로 교체
-        function handleUserThumbsDown(index) {
+        // 유저 영역 Thumbs Down
+        function handleUserThumbsDown(index, viewType) {
             const item = mnemonicDB[index];
             const maxIndex = item.userMnemonics.length;
             currentUserMnemonicIndex[index] = (currentUserMnemonicIndex[index] + 1) % maxIndex;
             
-            // 유저 영역만 살짝 깜빡이도록 처리
-            const userSection = document.getElementById(`user-section-${index}`);
+            const userSection = document.getElementById(`user-section-${viewType}-${index}`);
             userSection.style.opacity = '0.3';
             
             setTimeout(() => {
-                // 전체를 재렌더링하여 깔끔하게 업데이트 (상태는 유지됨)
-                const cardElement = document.getElementById(`card-${index}`);
-                renderCardContent(cardElement, index, item);
+                const cardElement = document.getElementById(`card-${viewType}-${index}`);
+                renderCardHTML(cardElement, index, item, viewType);
                 
-                const updatedUserSection = document.getElementById(`user-section-${index}`);
+                const updatedUserSection = document.getElementById(`user-section-${viewType}-${index}`);
                 updatedUserSection.style.opacity = '1';
                 updatedUserSection.style.transition = 'opacity 0.3s ease';
             }, 150);
         }
 
-        // 공통 Toast 메시지 함수 (메시지 내용을 동적으로 받음)
         function showToast(message) {
             const toast = document.getElementById('toast');
-            toast.innerText = message; // 전달받은 메시지로 텍스트 변경
+            toast.innerText = message;
             
             if (toastTimeout) {
                 clearTimeout(toastTimeout);
