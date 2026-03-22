@@ -139,7 +139,7 @@
             color: var(--text-sub);
         }
 
-        /* 피드백 버튼 (Thumbs Up/Down) */
+        /* 피드백 버튼 (AI 영역) */
         .feedback-btns {
             display: flex;
             gap: 0.5rem;
@@ -163,31 +163,6 @@
         .thumb-btn:hover {
             background-color: #F3F4F6;
             transform: scale(1.1);
-        }
-
-        /* Toast 알림 메시지 스타일 */
-        #toast {
-            position: fixed;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(31, 41, 55, 0.9);
-            color: white;
-            padding: 14px 28px;
-            border-radius: 50px;
-            font-size: 1rem;
-            font-weight: 500;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease, bottom 0.3s ease;
-            z-index: 1000;
-        }
-
-        #toast.show {
-            opacity: 1;
-            visibility: visible;
-            bottom: 50px;
         }
 
         .mnemonic-content {
@@ -219,6 +194,97 @@
             color: #E11D48;
             font-weight: bold;
         }
+
+        /* 구분선 */
+        .divider {
+            border: 0;
+            height: 1px;
+            background: var(--border-color);
+            margin: 1.5rem 0;
+        }
+
+        /* 유저 제안 영역 스타일 */
+        .user-mnemonic-section {
+            background-color: #F9FAFB;
+            padding: 1.2rem;
+            border-radius: 12px;
+            border: 1px dashed #D1D5DB;
+            transition: opacity 0.3s ease;
+        }
+
+        .user-mnemonic-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+
+        .user-mnemonic-title {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #4B5563;
+        }
+
+        .user-feedback-btns {
+            display: flex;
+            gap: 0.3rem;
+        }
+
+        .user-thumb-btn {
+            background: #FFFFFF;
+            border: 1px solid #E5E7EB;
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 0.3rem;
+            border-radius: 50%;
+            transition: all 0.2s;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .user-thumb-btn:hover {
+            background-color: #F3F4F6;
+            transform: scale(1.1);
+        }
+
+        .user-tag {
+            display: inline-block;
+            background-color: #10B981;
+            color: white;
+            padding: 0.1rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+        }
+
+        /* Toast 알림 메시지 스타일 */
+        #toast {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(31, 41, 55, 0.9);
+            color: white;
+            padding: 14px 28px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 500;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease, bottom 0.3s ease;
+            z-index: 1000;
+        }
+
+        #toast.show {
+            opacity: 1;
+            visibility: visible;
+            bottom: 50px;
+        }
     </style>
 </head>
 <body>
@@ -236,46 +302,62 @@
 
     <div id="results-container"></div>
 
-    <div id="toast">확인했습니다. 앞으로 유사한 암기법이 자주 사용됩니다.</div>
+    <div id="toast"></div>
 
     <script>
-        // 경선식 스타일 + 유저 피드백이 듬뿍 담긴 데이터베이스
+        // AI 생성 암기법 + 유저 제출 암기법 데이터베이스
         const mnemonicDB = [
             {
                 word: "Radius / Ulnar",
                 meaning: "요골(노뼈) / 척골(자뼈)",
                 mnemonics: [
-                    { type: "상황 연상법", text: "<strong><span class='highlight'>얼라(Ulnar)</span></strong>는 안에서 키우고 <strong><span class='highlight'>라디오(Radius)</span></strong>는 밖에서 들어라! (해부학적 자세 기준 새끼손가락 쪽 안쪽 뼈가 Ulnar, 엄지손가락 쪽 바깥쪽 뼈가 Radius)" },
-                    { type: "형태 변환", text: "Ulnar의 'U'는 움푹 들어간 안쪽 뼈, Radius의 'R'은 바깥으로 둥글게(Round) 뻗은 뼈를 연상하세요." }
+                    { type: "AI 연상법", text: "<strong><span class='highlight'>얼라(Ulnar)</span></strong>는 안에서 키우고 <strong><span class='highlight'>라디오(Radius)</span></strong>는 밖에서 들어라! (해부학적 자세 기준 새끼손가락 쪽 안쪽 뼈가 Ulnar, 엄지손가락 쪽 바깥쪽 뼈가 Radius)" },
+                    { type: "AI 형태 변환", text: "Ulnar의 'U'는 움푹 들어간 안쪽 뼈, Radius의 'R'은 바깥으로 둥글게(Round) 뻗은 뼈를 연상하세요." }
+                ],
+                userMnemonics: [
+                    { author: "의대생A", text: "라디오(Radius) 안테나는 바깥으로 쭉! 자(Ulnar)는 안쪽으로 대고 잰다!" },
+                    { author: "국시준비생", text: "엄지손가락 척! 하고 라운드(Radius)하게 돌려봐." }
                 ]
             },
             {
                 word: "Leiomyoma",
                 meaning: "평활근종 (매끈한 근육에 생기는 양성 종양)",
                 mnemonics: [
-                    { type: "발음 변환 종합세트", text: "<strong><span class='highlight'>레이(Lei)</span></strong>저 쫙~ 쏴서 제모했더니 피부가 <strong>매끈한!</strong><br><strong><span class='highlight'>마이 옷(Myo)</span></strong>! 내 옷이 빵빵한 <strong>근육</strong> 때문에 터질 것 같아!<br><strong><span class='highlight'>오마(Oma)</span></strong>이갓! 내 몸에 <strong>종양</strong>이 생기다니!<br><br>👉 <strong>합체:</strong> 매끈하게(Lei) 레이저 제모한 마이 옷(Myo) 터질듯한 근육맨이 '오마(Oma)이갓! 종양이라니!' 하고 절망하는 모습." },
-                    { type: "어원 조합", text: "Lei(매끈한) + myo(근육) + oma(종양) = 매끈한 근육에 생긴 종양." }
+                    { type: "AI 발음 변환", text: "<strong><span class='highlight'>레이(Lei)</span></strong>저 쫙~ 쏴서 제모했더니 피부가 <strong>매끈한!</strong><br><strong><span class='highlight'>마이 옷(Myo)</span></strong>! 내 옷이 빵빵한 <strong>근육</strong> 때문에 터질 것 같아!<br><strong><span class='highlight'>오마(Oma)</span></strong>이갓! 내 몸에 <strong>종양</strong>이 생기다니!<br><br>👉 <strong>합체:</strong> 매끈하게 제모한 근육맨이 '오마이갓! 종양이라니!' 절망하는 모습." }
+                ],
+                userMnemonics: [
+                    { author: "본과1학년", text: "레이오(Lei)가 내 근육(Myo)에 오마(Oma)이갓!" },
+                    { author: "지나가는널스", text: "매끈한(Lei) 마요네즈(Myo) 엄마(Oma)가 만든 종양..." }
                 ]
             },
             {
                 word: "Cyanosis",
                 meaning: "청색증 (피부와 점막이 푸르게 변하는 증상)",
                 mnemonics: [
-                    { type: "이미지 연상", text: "<strong><span class='highlight'>Cyano(싸이언)</span></strong> 👉 기를 너무 많이 모아서 노랗다 못해 <strong>파란색</strong>으로 변해버린 <strong>초사이언</strong> 블루! (파란색)" },
-                    { type: "상황 연상", text: "<strong><span class='highlight'>싸늘(Cyan)</span></strong> 👉 추운 겨울 밖에서 벌벌 떨었더니 얼굴이 <strong>싸늘(Cyan)</strong>하게 식어서 <strong>파랗게</strong> 질린 모습. (-osis는 질환을 뜻하므로 파랗게 질린 병)" }
+                    { type: "AI 이미지 연상", text: "<strong><span class='highlight'>Cyano(싸이언)</span></strong> 👉 기를 너무 많이 모아서 노랗다 못해 <strong>파란색</strong>으로 변해버린 <strong>초사이언</strong> 블루! (파란색)" },
+                    { type: "AI 상황 연상", text: "<strong><span class='highlight'>싸늘(Cyan)</span></strong> 👉 추운 겨울 밖에서 벌벌 떨었더니 얼굴이 <strong>싸늘(Cyan)</strong>하게 식어서 <strong>파랗게</strong> 질린 모습." }
+                ],
+                userMnemonics: [
+                    { author: "응급구조사", text: "파랗게 질린 싸이(Cyan)가 오시스(osis)..." },
+                    { author: "해부학마스터", text: "시안(Cyan) 잉크를 뒤집어써서 파랗게 된 병(-osis)." }
                 ]
             },
             {
                 word: "Etiology",
                 meaning: "병인학 (질병의 원인을 연구하는 학문)",
                 mnemonics: [
-                    { type: "상황 연상", text: "<strong><span class='highlight'>에티(Eti)</span></strong> 👉 맨체스터 시티 리그 우승의 가장 큰 <strong>원인</strong>은 <strong>에티</strong>하드(Etihad) 항공사의 빵빵한 스폰서십 때문이지!" },
-                    { type: "발음 변환", text: "<strong><span class='highlight'>에취(Eti)</span></strong> 👉 <strong>에취!</strong> 하고 재채기를 계속하는 <strong>원인</strong>이 대체 뭐야? 감기야 비염이야? (에취(Eti)하는 원인을 찾는 학문(-ology))" }
+                    { type: "AI 상황 연상", text: "<strong><span class='highlight'>에티(Eti)</span></strong> 👉 맨체스터 시티 리그 우승의 가장 큰 <strong>원인</strong>은 <strong>에티</strong>하드(Etihad) 항공사의 빵빵한 스폰서십 때문이지!" },
+                    { type: "AI 발음 변환", text: "<strong><span class='highlight'>에취(Eti)</span></strong> 👉 <strong>에취!</strong> 하고 재채기를 계속하는 <strong>원인</strong>이 대체 뭐야? 감기야 비염이야?" }
+                ],
+                userMnemonics: [
+                    { author: "의학도D", text: "이티(Eti)가 지구에 온 원인을 연구하는 학문(ology)" }
                 ]
             }
         ];
 
+        // AI 암기법 및 유저 암기법의 현재 인덱스 저장
         const currentMnemonicIndex = {};
+        const currentUserMnemonicIndex = {};
         let toastTimeout;
 
         function handleEnter(event) {
@@ -295,6 +377,8 @@
 
             mnemonicDB.forEach((item, index) => {
                 currentMnemonicIndex[index] = 0;
+                currentUserMnemonicIndex[index] = 0; // 유저 암기법 인덱스 초기화
+                
                 const card = document.createElement('div');
                 card.className = 'word-card';
                 card.id = `card-${index}`;
@@ -303,18 +387,20 @@
             });
         }
 
+        // 전체 카드 렌더링 (AI 영역 + 유저 영역)
         function renderCardContent(cardElement, index, item) {
             const mnemonic = item.mnemonics[currentMnemonicIndex[index]];
             
-            cardElement.innerHTML = `
+            // 1. AI 메인 영역
+            let html = `
                 <div class="word-header">
                     <div class="word-title">
                         <h2>${item.word}</h2>
                         <p>${item.meaning}</p>
                     </div>
                     <div class="feedback-btns">
-                        <button class="thumb-btn up" onclick="handleThumbsUp()" title="이 암기법이 좋아요">👍</button>
-                        <button class="thumb-btn down" onclick="handleThumbsDown(${index})" title="다른 암기법 보기">👎</button>
+                        <button class="thumb-btn up" onclick="showToast('AI 암기법을 내 단어장에 추가했습니다 👍')" title="이 암기법이 좋아요">👍</button>
+                        <button class="thumb-btn down" onclick="handleThumbsDown(${index})" title="다른 AI 암기법 보기">👎</button>
                     </div>
                 </div>
                 <div class="mnemonic-content">
@@ -322,9 +408,32 @@
                     <div class="mnemonic-text">${mnemonic.text}</div>
                 </div>
             `;
+
+            // 2. 유저 제안 영역 (데이터가 있을 경우에만 렌더링)
+            if (item.userMnemonics && item.userMnemonics.length > 0) {
+                const userMnemonic = item.userMnemonics[currentUserMnemonicIndex[index]];
+                html += `
+                    <hr class="divider">
+                    <div class="user-mnemonic-section" id="user-section-${index}">
+                        <div class="user-mnemonic-header">
+                            <span class="user-mnemonic-title">💡 이런 암기법은 어떠신가요?</span>
+                            <div class="user-feedback-btns">
+                                <button class="user-thumb-btn up" onclick="showToast('유저 암기법에 투표했습니다! 👏')" title="추천해요">👍</button>
+                                <button class="user-thumb-btn down" onclick="handleUserThumbsDown(${index})" title="다른 유저 암기법 보기">👎</button>
+                            </div>
+                        </div>
+                        <div class="mnemonic-text">
+                            <span class="user-tag">${userMnemonic.author}</span>
+                            ${userMnemonic.text}
+                        </div>
+                    </div>
+                `;
+            }
+
+            cardElement.innerHTML = html;
         }
 
-        // Thumbs Down: 다른 암기법으로 교체
+        // AI 암기법 Thumbs Down: 다른 AI 암기법으로 교체
         function handleThumbsDown(index) {
             const item = mnemonicDB[index];
             const maxIndex = item.mnemonics.length;
@@ -339,9 +448,31 @@
             }, 150);
         }
 
-        // Thumbs Up: Toast 메시지 띄우기
-        function handleThumbsUp() {
+        // 유저 암기법 Thumbs Down: 다른 유저 암기법으로 교체
+        function handleUserThumbsDown(index) {
+            const item = mnemonicDB[index];
+            const maxIndex = item.userMnemonics.length;
+            currentUserMnemonicIndex[index] = (currentUserMnemonicIndex[index] + 1) % maxIndex;
+            
+            // 유저 영역만 살짝 깜빡이도록 처리
+            const userSection = document.getElementById(`user-section-${index}`);
+            userSection.style.opacity = '0.3';
+            
+            setTimeout(() => {
+                // 전체를 재렌더링하여 깔끔하게 업데이트 (상태는 유지됨)
+                const cardElement = document.getElementById(`card-${index}`);
+                renderCardContent(cardElement, index, item);
+                
+                const updatedUserSection = document.getElementById(`user-section-${index}`);
+                updatedUserSection.style.opacity = '1';
+                updatedUserSection.style.transition = 'opacity 0.3s ease';
+            }, 150);
+        }
+
+        // 공통 Toast 메시지 함수 (메시지 내용을 동적으로 받음)
+        function showToast(message) {
             const toast = document.getElementById('toast');
+            toast.innerText = message; // 전달받은 메시지로 텍스트 변경
             
             if (toastTimeout) {
                 clearTimeout(toastTimeout);
@@ -356,4 +487,3 @@
     </script>
 </body>
 </html>
-
