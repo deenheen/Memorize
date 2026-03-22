@@ -512,12 +512,30 @@
 
             // 업로드하신 턱뼈 이미지 기준 대략적인 위치 (백분율)
             // 실제 서비스에서는 AI/Vision API가 좌표(Bounding Box)를 반환해줍니다.
+            // 🎯 미세 조정된 OCR 핫스팟 좌표 (이미지 비율에 완벽하게 맞춤)
             const mockData = [
-                { word: "Coronoid process", top: "33%", left: "44%", width: "22%", height: "6%" },
-                { word: "Condylar process", top: "45%", left: "73%", width: "23%", height: "7%" },
-                { word: "Mental foramen", top: "79%", left: "14%", width: "18%", height: "5%" }
+                { 
+                    word: "Coronoid process", 
+                    top: "41.5%",   // 위에서부터의 위치
+                    left: "37.5%",  // 왼쪽에서부터의 위치
+                    width: "18.5%", // 박스 가로 넓이
+                    height: "5%"    // 박스 세로 높이
+                },
+                { 
+                    word: "Condylar process", 
+                    top: "48%", 
+                    left: "80%", 
+                    width: "18%", 
+                    height: "5%" 
+                },
+                { 
+                    word: "Mental foramen", 
+                    top: "78.5%", 
+                    left: "13.5%", 
+                    width: "19%", 
+                    height: "5.5%" 
+                }
             ];
-
             mockData.forEach(data => {
                 const spot = document.createElement('div');
                 spot.className = 'ocr-hotspot';
