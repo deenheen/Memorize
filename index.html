@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>의학용어 암기 마스터</title>
+    <title>의학용어 암기 마스터 - OCR 스캔 버전</title>
     <style>
         /* 기본 스타일 설정 (미니멀리즘) */
         :root {
@@ -14,6 +14,7 @@
             --card-bg: #FFFFFF;
             --border-color: #E5E7EB;
             --star-color: #F59E0B;
+            --highlight-color: #10B981; /* OCR 선택 시 테두리 색상 */
         }
 
         body {
@@ -97,6 +98,8 @@
             height: calc(100vh - 60px);
             width: 100%;
             transition: all 0.5s ease-in-out;
+            padding: 0 1rem;
+            box-sizing: border-box;
         }
 
         #search-container.active {
@@ -122,13 +125,15 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             padding: 0.5rem;
             transition: all 0.3s ease;
+            position: relative;
+            z-index: 20;
         }
 
-        .search-bar input {
+        .search-bar input[type="text"] {
             flex: 1;
             border: none;
             outline: none;
-            padding: 1rem 1.5rem;
+            padding: 1rem 0.5rem 1rem 1.5rem;
             font-size: 1.1rem;
             border-radius: 50px;
             background: transparent;
@@ -137,14 +142,27 @@
         .search-bar .icons {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 0 10px;
+            gap: 15px;
+            padding: 0 15px;
             color: var(--text-sub);
-            font-size: 1.2rem;
-            cursor: pointer;
+            font-size: 1.4rem;
         }
 
-        .search-bar button {
+        .icon-btn {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .icon-btn:hover {
+            transform: scale(1.2);
+        }
+
+        /* 파일 입력 숨기기 */
+        #image-upload {
+            display: none;
+        }
+
+        .search-bar button.submit-btn {
             background-color: var(--primary-color);
             color: white;
             border: none;
@@ -156,11 +174,86 @@
             transition: background-color 0.2s;
         }
 
-        .search-bar button:hover {
+        .search-bar button.submit-btn:hover {
             background-color: #357ABD;
         }
 
-        /* 결과 영역 (검색 결과 & 나만의 단어장 공통) */
+        /* 📸 OCR 시뮬레이션 영역 (업로드된 이미지 영역) */
+        #ocr-container {
+            display: none;
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-top: 1.5rem;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            background: #000; /* 어두운 배경 기본값 */
+        }
+
+        #ocr-image {
+            width: 100%;
+            display: block;
+            filter: brightness(0.4); /* 기본적으로 이미지를 어둡게 처리 */
+            transition: filter 0.3s ease;
+        }
+
+        /* 스캔된 단어 핫스팟 (선택 영역) */
+        .ocr-hotspot {
+            position: absolute;
+            cursor: pointer;
+            border: 2px solid transparent;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            /* backdrop-filter를 이용해 뒤에 있는 어두운 이미지를 밝게(2.5배) 만듦 */
+            backdrop-filter: brightness(2.5) contrast(1.2);
+            -webkit-backdrop-filter: brightness(2.5) contrast(1.2);
+            opacity: 0; /* 평소엔 숨김 */
+        }
+
+        .ocr-hotspot:hover, .ocr-hotspot.active {
+            opacity: 1; /* 마우스 올리면 밝아짐 */
+            border-color: var(--highlight-color);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.6);
+        }
+
+        .ocr-tooltip {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .ocr-hotspot:hover .ocr-tooltip {
+            opacity: 1;
+        }
+
+        .ocr-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+            color: white;
+            font-size: 0.9rem;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 결과 영역 공통 */
         .content-container {
             display: none;
             flex-direction: column;
@@ -168,14 +261,6 @@
             max-width: 800px;
             gap: 1.5rem;
             padding: 0 1rem 3rem 1rem;
-        }
-
-        /* 단어장 탭 전용 빈 상태 메시지 */
-        .empty-state {
-            text-align: center;
-            padding: 4rem 1rem;
-            color: var(--text-sub);
-            font-size: 1.1rem;
         }
 
         .word-card {
@@ -213,7 +298,6 @@
             color: var(--primary-color);
         }
 
-        /* 북마크 버튼 */
         .bookmark-btn {
             background: none;
             border: none;
@@ -222,8 +306,6 @@
             cursor: pointer;
             padding: 0;
             transition: transform 0.2s;
-            display: flex;
-            align-items: center;
         }
 
         .bookmark-btn:hover {
@@ -240,152 +322,39 @@
             color: var(--text-sub);
         }
 
-        /* 피드백 버튼 (AI 영역) */
-        .feedback-btns {
-            display: flex;
-            gap: 0.5rem;
-        }
-
+        .feedback-btns { display: flex; gap: 0.5rem; }
         .thumb-btn {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 0.5rem;
-            border-radius: 50%;
-            transition: transform 0.2s, background-color 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 45px;
-            height: 45px;
+            background: none; border: none; font-size: 1.5rem; cursor: pointer; padding: 0.5rem;
+            border-radius: 50%; transition: transform 0.2s, background-color 0.2s;
+            display: flex; align-items: center; justify-content: center; width: 45px; height: 45px;
         }
+        .thumb-btn:hover { background-color: #F3F4F6; transform: scale(1.1); }
 
-        .thumb-btn:hover {
-            background-color: #F3F4F6;
-            transform: scale(1.1);
-        }
-
-        .mnemonic-content {
-            font-size: 1.1rem;
-            line-height: 1.6;
-        }
-
+        .mnemonic-content { font-size: 1.1rem; line-height: 1.6; }
         .mnemonic-tag {
-            display: inline-block;
-            background-color: #E0E7FF;
-            color: #4338CA;
-            padding: 0.2rem 0.6rem;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            margin-right: 0.5rem;
+            display: inline-block; background-color: #E0E7FF; color: #4338CA; padding: 0.2rem 0.6rem;
+            border-radius: 4px; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-right: 0.5rem;
         }
+        .mnemonic-text { margin-top: 0.5rem; }
+        .mnemonic-text strong { color: #111827; }
+        .mnemonic-text span.highlight { color: #E11D48; font-weight: bold; }
 
-        .mnemonic-text {
-            margin-top: 0.5rem;
-        }
+        .divider { border: 0; height: 1px; background: var(--border-color); margin: 1.5rem 0; }
+        .user-mnemonic-section { background-color: #F9FAFB; padding: 1.2rem; border-radius: 12px; border: 1px dashed #D1D5DB; transition: opacity 0.3s ease; }
+        .user-mnemonic-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; }
+        .user-mnemonic-title { font-size: 1rem; font-weight: bold; color: #4B5563; }
+        .user-feedback-btns { display: flex; gap: 0.3rem; }
+        .user-thumb-btn { background: #FFFFFF; border: 1px solid #E5E7EB; font-size: 1.1rem; cursor: pointer; padding: 0.3rem; border-radius: 50%; transition: all 0.2s; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; }
+        .user-thumb-btn:hover { background-color: #F3F4F6; transform: scale(1.1); }
+        .user-tag { display: inline-block; background-color: #10B981; color: white; padding: 0.1rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600; margin-right: 0.5rem; }
 
-        .mnemonic-text strong {
-            color: #111827;
-        }
-        
-        .mnemonic-text span.highlight {
-            color: #E11D48;
-            font-weight: bold;
-        }
-
-        /* 구분선 */
-        .divider {
-            border: 0;
-            height: 1px;
-            background: var(--border-color);
-            margin: 1.5rem 0;
-        }
-
-        /* 유저 제안 영역 스타일 */
-        .user-mnemonic-section {
-            background-color: #F9FAFB;
-            padding: 1.2rem;
-            border-radius: 12px;
-            border: 1px dashed #D1D5DB;
-            transition: opacity 0.3s ease;
-        }
-
-        .user-mnemonic-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.8rem;
-        }
-
-        .user-mnemonic-title {
-            font-size: 1rem;
-            font-weight: bold;
-            color: #4B5563;
-        }
-
-        .user-feedback-btns {
-            display: flex;
-            gap: 0.3rem;
-        }
-
-        .user-thumb-btn {
-            background: #FFFFFF;
-            border: 1px solid #E5E7EB;
-            font-size: 1.1rem;
-            cursor: pointer;
-            padding: 0.3rem;
-            border-radius: 50%;
-            transition: all 0.2s;
-            width: 35px;
-            height: 35px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .user-thumb-btn:hover {
-            background-color: #F3F4F6;
-            transform: scale(1.1);
-        }
-
-        .user-tag {
-            display: inline-block;
-            background-color: #10B981;
-            color: white;
-            padding: 0.1rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin-right: 0.5rem;
-        }
-
-        /* Toast 알림 메시지 스타일 */
         #toast {
-            position: fixed;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(31, 41, 55, 0.9);
-            color: white;
-            padding: 14px 28px;
-            border-radius: 50px;
-            font-size: 1rem;
-            font-weight: 500;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease, bottom 0.3s ease;
-            z-index: 1000;
+            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+            background-color: rgba(31, 41, 55, 0.9); color: white; padding: 14px 28px;
+            border-radius: 50px; font-size: 1rem; font-weight: 500; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease, bottom 0.3s ease; z-index: 1000;
         }
-
-        #toast.show {
-            opacity: 1;
-            visibility: visible;
-            bottom: 50px;
-        }
+        #toast.show { opacity: 1; visibility: visible; bottom: 50px; }
     </style>
 </head>
 <body>
@@ -403,16 +372,29 @@
     <div id="search-container">
         <h1>의학용어 암기 마스터</h1>
         <div class="search-bar">
-            <div class="icons" title="파일/이미지 첨부">📎 📷</div>
-            <input type="text" id="word-input" placeholder="단어, 파일, 혹은 이미지를 입력하세요 (엔터 또는 클릭)" onkeypress="handleEnter(event)">
-            <button onclick="generateMnemonics()">암기법 변환</button>
+            <div class="icons">
+                <label for="image-upload" class="icon-btn" title="전공책/자료 사진 스캔 (OCR)">📷</label>
+                <input type="file" id="image-upload" accept="image/*" onchange="handleImageUpload(event)">
+                <span class="icon-btn" title="파일 첨부">📎</span>
+            </div>
+            <input type="text" id="word-input" placeholder="단어, 파일, 혹은 이미지를 입력하세요" onkeypress="handleEnter(event)">
+            <button class="submit-btn" onclick="generateMnemonics()">암기법 변환</button>
+        </div>
+
+        <div id="ocr-container">
+            <div class="ocr-header">
+                <span style="display:inline-block; width:10px; height:10px; background:#10B981; border-radius:50%; box-shadow:0 0 5px #10B981;"></span>
+                AI 스캔 완료! 밝게 표시된 단어를 선택하세요.
+            </div>
+            <img id="ocr-image" src="" alt="스캔된 이미지">
+            <div id="ocr-hotspots"></div>
         </div>
     </div>
 
     <div id="results-container" class="content-container"></div>
 
     <div id="wordbook-container" class="content-container">
-        <div class="empty-state">
+        <div class="empty-state" style="text-align: center; padding: 4rem 1rem; color: #6B7280;">
             아직 단어장에 추가된 단어가 없습니다.<br>
             검색 결과에서 ⭐ 버튼을 눌러 단어를 추가해 보세요!
         </div>
@@ -421,63 +403,60 @@
     <div id="toast"></div>
 
     <script>
+        // --- 1. 데이터베이스 ---
+        // 기존 데이터에 이번에 업로드하신 턱뼈 해부학 용어들을 추가했습니다!
         const mnemonicDB = [
             {
-                word: "Radius / Ulnar",
-                meaning: "요골(노뼈) / 척골(자뼈)",
+                word: "Coronoid process",
+                meaning: "근육돌기 (아래턱뼈 앞쪽 뾰족한 돌기)",
                 mnemonics: [
-                    { type: "AI 연상법", text: "<strong><span class='highlight'>얼라(Ulnar)</span></strong>는 안에서 키우고 <strong><span class='highlight'>라디오(Radius)</span></strong>는 밖에서 들어라! (해부학적 자세 기준 새끼손가락 쪽 안쪽 뼈가 Ulnar, 엄지손가락 쪽 바깥쪽 뼈가 Radius)" },
-                    { type: "AI 형태 변환", text: "Ulnar의 'U'는 움푹 들어간 안쪽 뼈, Radius의 'R'은 바깥으로 둥글게(Round) 뻗은 뼈를 연상하세요." }
+                    { type: "AI 연상법", text: "<strong><span class='highlight'>코로나(Coronoid)</span></strong> 바이러스의 표면처럼 뾰족하게 튀어나온 <strong>돌기(process)</strong>를 연상해 보세요! 앞쪽에서 콕 찌를 것 같은 부리 모양입니다." },
+                    { type: "AI 형태 변환", text: "Coronoid의 'C'와 턱뼈 앞부분이 맞물려 근육이 꽉 붙는 형태를 떠올려보세요." }
                 ],
                 userMnemonics: [
-                    { author: "의대생A", text: "라디오(Radius) 안테나는 바깥으로 쭉! 자(Ulnar)는 안쪽으로 대고 잰다!" },
-                    { author: "국시준비생", text: "엄지손가락 척! 하고 라운드(Radius)하게 돌려봐." }
+                    { author: "해부학1타", text: "코 찔찔이(Coro)가 앞으로 튀어나온 돌기 ㅋㅋ" }
+                ]
+            },
+            {
+                word: "Condylar process",
+                meaning: "관절돌기 (아래턱뼈 뒤쪽 둥근 돌기)",
+                mnemonics: [
+                    { type: "AI 연상법", text: "둥글고 매끄러운 <strong><span class='highlight'>콘(Condylar)</span></strong> 아이스크림을 상상하세요! 측두골과 부드럽게 관절을 이루기 위해 동글동글하게 생겼습니다." }
+                ],
+                userMnemonics: [
+                    { author: "치대생K", text: "관절은 동글동글하게 굴러가야 하니까 콘(Con)모양!" }
+                ]
+            },
+            {
+                word: "Mental foramen",
+                meaning: "턱끝구멍, 이공",
+                mnemonics: [
+                    { type: "AI 연상법", text: "<strong><span class='highlight'>멘탈(Mental)</span></strong>이 나갈 정도로 턱끝을 세게 부딪혔더니 그 자리에 <strong>구멍(foramen)</strong>이 생겼다! (해부학에서 Mental은 '턱끝'을 의미합니다)" }
+                ],
+                userMnemonics: [
+                    { author: "보건학도", text: "턱 끝에 구멍 뚫리면 진짜 멘탈 나갈듯..." }
                 ]
             },
             {
                 word: "Leiomyoma",
                 meaning: "평활근종 (매끈한 근육에 생기는 양성 종양)",
                 mnemonics: [
-                    { type: "AI 발음 변환", text: "<strong><span class='highlight'>레이(Lei)</span></strong>저 쫙~ 쏴서 제모했더니 피부가 <strong>매끈한!</strong><br><strong><span class='highlight'>마이 옷(Myo)</span></strong>! 내 옷이 빵빵한 <strong>근육</strong> 때문에 터질 것 같아!<br><strong><span class='highlight'>오마(Oma)</span></strong>이갓! 내 몸에 <strong>종양</strong>이 생기다니!<br><br>👉 <strong>합체:</strong> 매끈하게 제모한 근육맨이 '오마이갓! 종양이라니!' 절망하는 모습." }
+                    { type: "AI 발음 변환", text: "<strong><span class='highlight'>레이(Lei)</span></strong>저 쫙~ 쏴서 제모했더니 피부가 <strong>매끈한!</strong><br><strong><span class='highlight'>마이 옷(Myo)</span></strong>! 내 옷이 빵빵한 <strong>근육</strong> 때문에 터질 것 같아!<br><strong><span class='highlight'>오마(Oma)</span></strong>이갓! 내 몸에 <strong>종양</strong>이 생기다니!" }
                 ],
                 userMnemonics: [
-                    { author: "본과1학년", text: "레이오(Lei)가 내 근육(Myo)에 오마(Oma)이갓!" },
                     { author: "지나가는널스", text: "매끈한(Lei) 마요네즈(Myo) 엄마(Oma)가 만든 종양..." }
-                ]
-            },
-            {
-                word: "Cyanosis",
-                meaning: "청색증 (피부와 점막이 푸르게 변하는 증상)",
-                mnemonics: [
-                    { type: "AI 이미지 연상", text: "<strong><span class='highlight'>Cyano(싸이언)</span></strong> 👉 기를 너무 많이 모아서 노랗다 못해 <strong>파란색</strong>으로 변해버린 <strong>초사이언</strong> 블루! (파란색)" },
-                    { type: "AI 상황 연상", text: "<strong><span class='highlight'>싸늘(Cyan)</span></strong> 👉 추운 겨울 밖에서 벌벌 떨었더니 얼굴이 <strong>싸늘(Cyan)</strong>하게 식어서 <strong>파랗게</strong> 질린 모습." }
-                ],
-                userMnemonics: [
-                    { author: "응급구조사", text: "파랗게 질린 싸이(Cyan)가 오시스(osis)..." },
-                    { author: "해부학마스터", text: "시안(Cyan) 잉크를 뒤집어써서 파랗게 된 병(-osis)." }
-                ]
-            },
-            {
-                word: "Etiology",
-                meaning: "병인학 (질병의 원인을 연구하는 학문)",
-                mnemonics: [
-                    { type: "AI 상황 연상", text: "<strong><span class='highlight'>에티(Eti)</span></strong> 👉 맨체스터 시티 리그 우승의 가장 큰 <strong>원인</strong>은 <strong>에티</strong>하드(Etihad) 항공사의 빵빵한 스폰서십 때문이지!" },
-                    { type: "AI 발음 변환", text: "<strong><span class='highlight'>에취(Eti)</span></strong> 👉 <strong>에취!</strong> 하고 재채기를 계속하는 <strong>원인</strong>이 대체 뭐야? 감기야 비염이야?" }
-                ],
-                userMnemonics: [
-                    { author: "의학도D", text: "이티(Eti)가 지구에 온 원인을 연구하는 학문(ology)" }
                 ]
             }
         ];
 
-        // 상태 관리
+        // --- 2. 상태 관리 ---
         const currentMnemonicIndex = {};
         const currentUserMnemonicIndex = {};
-        const bookmarkedIndices = new Set(); // 북마크된 단어의 index 저장
+        const bookmarkedIndices = new Set();
         let toastTimeout;
-        let activeTab = 'home'; // 'home' 또는 'wordbook'
+        let activeTab = 'home'; 
 
-        // 탭 전환 로직
+        // 탭 전환
         function switchTab(tabName) {
             activeTab = tabName;
             const searchContainer = document.getElementById('search-container');
@@ -490,7 +469,6 @@
             if (tabName === 'home') {
                 wordbookContainer.style.display = 'none';
                 searchContainer.style.display = 'flex';
-                // 검색된 적이 있으면(active 클래스) 결과도 보여줌
                 if (searchContainer.classList.contains('active')) {
                     resultsContainer.style.display = 'flex';
                 }
@@ -502,7 +480,149 @@
             }
         }
 
-        // 북마크 토글 로직
+        // --- 3. 📸 OCR 이미지 스캔 시뮬레이션 로직 ---
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // 1. 이미지를 화면에 표시
+                    const imgElement = document.getElementById('ocr-image');
+                    imgElement.src = e.target.result;
+                    
+                    // 2. OCR 컨테이너 보이기
+                    const ocrContainer = document.getElementById('ocr-container');
+                    ocrContainer.style.display = 'block';
+
+                    // 3. 기존 검색창 레이아웃 부드럽게 위로 올리기
+                    document.getElementById('search-container').classList.add('active');
+                    document.querySelector('h1').style.fontSize = '1.5rem';
+                    document.getElementById('results-container').style.display = 'none'; // 기존 결과 숨김
+
+                    // 4. 모의 핫스팟(단어 영역) 렌더링
+                    renderMockHotspots();
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function renderMockHotspots() {
+            const hotspotsContainer = document.getElementById('ocr-hotspots');
+            hotspotsContainer.innerHTML = '';
+
+            // 업로드하신 턱뼈 이미지 기준 대략적인 위치 (백분율)
+            // 실제 서비스에서는 AI/Vision API가 좌표(Bounding Box)를 반환해줍니다.
+            const mockData = [
+                { word: "Coronoid process", top: "33%", left: "44%", width: "22%", height: "6%" },
+                { word: "Condylar process", top: "45%", left: "73%", width: "23%", height: "7%" },
+                { word: "Mental foramen", top: "79%", left: "14%", width: "18%", height: "5%" }
+            ];
+
+            mockData.forEach(data => {
+                const spot = document.createElement('div');
+                spot.className = 'ocr-hotspot';
+                spot.style.top = data.top;
+                spot.style.left = data.left;
+                spot.style.width = data.width;
+                spot.style.height = data.height;
+                
+                // 툴팁 생성
+                const tooltip = document.createElement('div');
+                tooltip.className = 'ocr-tooltip';
+                tooltip.innerText = data.word;
+                spot.appendChild(tooltip);
+
+                // 클릭 시 동작: 검색창에 단어 입력 후 변환 실행
+                spot.onclick = function() {
+                    // 모든 핫스팟의 active 상태 해제 후 클릭된 것만 active
+                    document.querySelectorAll('.ocr-hotspot').forEach(el => el.classList.remove('active'));
+                    spot.classList.add('active');
+
+                    // 검색창에 단어 삽입
+                    const input = document.getElementById('word-input');
+                    input.value = data.word;
+                    
+                    // 자동 검색 실행 (잠시 대기 후 자연스럽게)
+                    setTimeout(() => generateMnemonics(data.word), 300);
+                };
+
+                hotspotsContainer.appendChild(spot);
+            });
+        }
+
+        // --- 4. 검색 및 결과 렌더링 로직 ---
+        function handleEnter(event) {
+            if (event.key === 'Enter') generateMnemonics();
+        }
+
+        function generateMnemonics(directWord = null) {
+            if(activeTab !== 'home') switchTab('home');
+
+            const searchContainer = document.getElementById('search-container');
+            const resultsContainer = document.getElementById('results-container');
+            const inputVal = (directWord || document.getElementById('word-input').value).toLowerCase();
+
+            searchContainer.classList.add('active');
+            document.querySelector('h1').style.fontSize = '1.5rem';
+            resultsContainer.style.display = 'flex';
+            resultsContainer.innerHTML = '';
+
+            // 입력된 단어 필터링 (비어있으면 전체 출력, 특정 단어면 해당 단어만)
+            let filteredDB = mnemonicDB;
+            if (inputVal.trim() !== "") {
+                filteredDB = mnemonicDB.filter(item => 
+                    item.word.toLowerCase().includes(inputVal) || 
+                    item.meaning.includes(inputVal)
+                );
+            }
+
+            if (filteredDB.length === 0) {
+                resultsContainer.innerHTML = '<div style="text-align:center; padding:2rem; color:#6B7280;">검색 결과가 없습니다. AI가 암기법을 생성하는 중입니다...</div>';
+                return;
+            }
+
+            filteredDB.forEach((item) => {
+                // 원본 DB에서의 실제 인덱스 찾기
+                const originalIndex = mnemonicDB.findIndex(dbItem => dbItem.word === item.word);
+                
+                if(currentMnemonicIndex[originalIndex] === undefined) {
+                    currentMnemonicIndex[originalIndex] = 0;
+                    currentUserMnemonicIndex[originalIndex] = 0;
+                }
+                
+                const card = document.createElement('div');
+                card.className = 'word-card';
+                card.id = `card-home-${originalIndex}`;
+                renderCardHTML(card, originalIndex, item, 'home');
+                resultsContainer.appendChild(card);
+            });
+
+            // 스크롤 아래로 부드럽게 이동
+            if(directWord) {
+                setTimeout(() => {
+                    resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            }
+        }
+
+        // 단어장 렌더링, HTML 생성 로직, 북마크 토글 기능 등 (이전과 동일)
+        function renderWordbook() {
+            const wordbookContainer = document.getElementById('wordbook-container');
+            wordbookContainer.innerHTML = '';
+            if (bookmarkedIndices.size === 0) {
+                wordbookContainer.innerHTML = `<div class="empty-state">아직 단어장에 추가된 단어가 없습니다.<br>검색 결과에서 ⭐ 버튼을 눌러 단어를 추가해 보세요!</div>`;
+                return;
+            }
+            bookmarkedIndices.forEach(index => {
+                const item = mnemonicDB[index];
+                const card = document.createElement('div');
+                card.className = 'word-card';
+                card.id = `card-wordbook-${index}`; 
+                renderCardHTML(card, index, item, 'wordbook');
+                wordbookContainer.appendChild(card);
+            });
+        }
+
         function toggleBookmark(index) {
             if (bookmarkedIndices.has(index)) {
                 bookmarkedIndices.delete(index);
@@ -511,92 +631,21 @@
                 bookmarkedIndices.add(index);
                 showToast('나만의 단어장에 추가되었습니다! ⭐');
             }
-            
-            // 배지 숫자 업데이트
             document.getElementById('bookmark-count').innerText = bookmarkedIndices.size;
-            
-            // 모든 렌더링된 카드(결과창, 단어장 둘 다)의 별 모양 즉시 동기화
             updateBookmarkIcons(index);
-
-            // 단어장 탭에 있을 때 삭제를 누르면 바로 리스트에서 사라지게 함
-            if (activeTab === 'wordbook') {
-                renderWordbook();
-            }
+            if (activeTab === 'wordbook') renderWordbook();
         }
 
-        // DOM 상의 북마크 아이콘 업데이트 (결과 컨테이너, 단어장 컨테이너 동시 동기화)
         function updateBookmarkIcons(index) {
             const btns = document.querySelectorAll(`.bookmark-btn-${index}`);
             const isBookmarked = bookmarkedIndices.has(index);
             btns.forEach(btn => {
                 btn.innerHTML = isBookmarked ? '★' : '☆';
-                if(isBookmarked) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
-                }
+                if(isBookmarked) btn.classList.add('active');
+                else btn.classList.remove('active');
             });
         }
 
-        function handleEnter(event) {
-            if (event.key === 'Enter') {
-                generateMnemonics();
-            }
-        }
-
-        function generateMnemonics() {
-            // 다른 탭에 있다가 엔터를 쳤을 경우를 대비해 home 탭으로 전환
-            if(activeTab !== 'home') switchTab('home');
-
-            const searchContainer = document.getElementById('search-container');
-            const resultsContainer = document.getElementById('results-container');
-
-            searchContainer.classList.add('active');
-            document.querySelector('h1').style.fontSize = '1.5rem';
-            resultsContainer.style.display = 'flex';
-            resultsContainer.innerHTML = '';
-
-            mnemonicDB.forEach((item, index) => {
-                if(currentMnemonicIndex[index] === undefined) {
-                    currentMnemonicIndex[index] = 0;
-                    currentUserMnemonicIndex[index] = 0;
-                }
-                
-                const card = document.createElement('div');
-                card.className = 'word-card';
-                card.id = `card-home-${index}`; // 홈 탭 고유 ID
-                renderCardHTML(card, index, item, 'home');
-                resultsContainer.appendChild(card);
-            });
-        }
-
-        // 단어장 렌더링
-        function renderWordbook() {
-            const wordbookContainer = document.getElementById('wordbook-container');
-            wordbookContainer.innerHTML = '';
-
-            if (bookmarkedIndices.size === 0) {
-                wordbookContainer.innerHTML = `
-                    <div class="empty-state">
-                        아직 단어장에 추가된 단어가 없습니다.<br>
-                        검색 결과에서 ⭐ 버튼을 눌러 단어를 추가해 보세요!
-                    </div>
-                `;
-                return;
-            }
-
-            // 북마크된 인덱스들만 순회하며 카드 생성
-            bookmarkedIndices.forEach(index => {
-                const item = mnemonicDB[index];
-                const card = document.createElement('div');
-                card.className = 'word-card';
-                card.id = `card-wordbook-${index}`; // 단어장 탭 고유 ID
-                renderCardHTML(card, index, item, 'wordbook');
-                wordbookContainer.appendChild(card);
-            });
-        }
-
-        // 카드 내부 HTML 렌더링 (홈 탭, 단어장 탭 공통 로직)
         function renderCardHTML(cardElement, index, item, viewType) {
             const mnemonic = item.mnemonics[currentMnemonicIndex[index]];
             const isBookmarked = bookmarkedIndices.has(index);
@@ -606,9 +655,7 @@
                     <div class="word-title-area">
                         <div class="word-title-top">
                             <h2 class="word-title">${item.word}</h2>
-                            <button class="bookmark-btn bookmark-btn-${index} ${isBookmarked ? 'active' : ''}" onclick="toggleBookmark(${index})" title="단어장 추가/삭제">
-                                ${isBookmarked ? '★' : '☆'}
-                            </button>
+                            <button class="bookmark-btn bookmark-btn-${index} ${isBookmarked ? 'active' : ''}" onclick="toggleBookmark(${index})" title="단어장 추가/삭제">${isBookmarked ? '★' : '☆'}</button>
                         </div>
                         <p>${item.meaning}</p>
                     </div>
@@ -642,57 +689,38 @@
                     </div>
                 `;
             }
-
             cardElement.innerHTML = html;
         }
 
-        // AI 영역 Thumbs Down
         function handleThumbsDown(index, viewType) {
             const item = mnemonicDB[index];
-            const maxIndex = item.mnemonics.length;
-            currentMnemonicIndex[index] = (currentMnemonicIndex[index] + 1) % maxIndex;
-            
+            currentMnemonicIndex[index] = (currentMnemonicIndex[index] + 1) % item.mnemonics.length;
             const cardElement = document.getElementById(`card-${viewType}-${index}`);
             cardElement.style.opacity = '0.5';
             setTimeout(() => {
                 renderCardHTML(cardElement, index, item, viewType);
                 cardElement.style.opacity = '1';
-                cardElement.style.transition = 'opacity 0.3s ease';
             }, 150);
         }
 
-        // 유저 영역 Thumbs Down
         function handleUserThumbsDown(index, viewType) {
             const item = mnemonicDB[index];
-            const maxIndex = item.userMnemonics.length;
-            currentUserMnemonicIndex[index] = (currentUserMnemonicIndex[index] + 1) % maxIndex;
-            
+            currentUserMnemonicIndex[index] = (currentUserMnemonicIndex[index] + 1) % item.userMnemonics.length;
             const userSection = document.getElementById(`user-section-${viewType}-${index}`);
             userSection.style.opacity = '0.3';
-            
             setTimeout(() => {
                 const cardElement = document.getElementById(`card-${viewType}-${index}`);
                 renderCardHTML(cardElement, index, item, viewType);
-                
-                const updatedUserSection = document.getElementById(`user-section-${viewType}-${index}`);
-                updatedUserSection.style.opacity = '1';
-                updatedUserSection.style.transition = 'opacity 0.3s ease';
+                document.getElementById(`user-section-${viewType}-${index}`).style.opacity = '1';
             }, 150);
         }
 
         function showToast(message) {
             const toast = document.getElementById('toast');
             toast.innerText = message;
-            
-            if (toastTimeout) {
-                clearTimeout(toastTimeout);
-            }
-            
+            if (toastTimeout) clearTimeout(toastTimeout);
             toast.classList.add('show');
-            
-            toastTimeout = setTimeout(() => {
-                toast.classList.remove('show');
-            }, 2500);
+            toastTimeout = setTimeout(() => toast.classList.remove('show'), 2500);
         }
     </script>
 </body>
